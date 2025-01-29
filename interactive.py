@@ -4,11 +4,22 @@ from scipy.stats import pearsonr
 import seaborn as sns
 import streamlit as st
 
+# -- Streamlit-Seiteneinstellungen gleich zu Beginn setzen --
+st.set_page_config(
+    page_title="Pearson-Korrelation Visualisierung",
+    layout="wide"
+)
+
 # Setze Seaborn-Thema für konsistente und ansprechende Plots
 sns.set_theme(style="whitegrid")
 
 def calculate_pearson(x, y):
-    """Manuelle Pearson-Berechnung"""
+    """
+    Manuelle Pearson-Berechnung.
+
+    Diese Implementierung verwendet die äquivalente Formel:
+    r = (n * sum(xy) - sum(x)*sum(y)) / sqrt((n * sum(x^2) - (sum(x))^2) * (n * sum(y^2) - (sum(y))^2))
+    """
     n = len(x)
     sum_xy = np.sum(x * y)
     sum_x = np.sum(x)
@@ -30,6 +41,7 @@ def generate_linear_data(r, sample_size):
     z = np.random.normal(0, 1, sample_size)
     
     # Erzeuge y mit gewünschtem Korrelationskoeffizienten r
+    # y = r*x + sqrt(1 - r^2)*z => lineare Kombination
     y = r * x + np.sqrt(1 - r**2) * z
     
     # Skaliere x auf den Bereich [0, 10]
@@ -50,8 +62,9 @@ def generate_nonlinear_data(noise, sample_size):
 
 def generate_random_data(noise, sample_size):
     """
-    Generiere zufällige Daten ohne Zusammenhang.
+    Generiere zufällige Daten ohne erkennbaren Zusammenhang.
     """
+    # Hier könnte man 'noise' nutzen, z. B. für Varianz-Anpassungen.
     x = np.random.normal(5, 2, sample_size)
     y = np.random.normal(5, 2, sample_size)
     return x, y
@@ -70,12 +83,13 @@ def display_formula():
     st.markdown(r"""
     ## Pearson-Korrelationskoeffizient Formel
 
-    Der Pearson-Korrelationskoeffizient $r$ misst die Stärke und Richtung der linearen Beziehung zwischen zwei Variablen $X$ und $Y$.
+    Der Pearson-Korrelationskoeffizient $r$ misst die Stärke und Richtung der 
+    linearen Beziehung zwischen zwei Variablen $X$ und $Y$.
 
-    Die Formel lautet:
+    Eine gebräuchliche Form der Formel lautet:
 
     $$
-    r = \frac{n \sum xy - (\sum x)(\sum y)}{\sqrt{(n \sum x^2 - (\sum x)^2)(n \sum y^2 - (\sum y)^2)}}
+    r = \frac{n \sum xy - (\sum x)(\sum y)}{\sqrt{(n \sum x^2 - (\sum x)^2)\,(n \sum y^2 - (\sum y)^2)}}
     $$
 
     **Interpretation von $r$:**
@@ -84,12 +98,17 @@ def display_formula():
     - **$r = -1$:** Perfekte negative lineare Korrelation
     - **$r = 0$:** Keine lineare Korrelation
 
-    **Bestimmtheitsmaß ($r^2$):** Gibt an, wie viel Prozent der Varianz der einen Variable durch die andere Variable erklärt wird.
+    **Bestimmtheitsmaß ($r^2$):** Gibt an, wie viel Prozent der Varianz der einen 
+    Variable durch die andere Variable erklärt wird.
 
     **P-Wert:** Gibt an, ob die beobachtete Korrelation statistisch signifikant ist.
     """)
 
 def update_plot(dataset_type, r, noise, sample_size, show_line):
+    """
+    Erzeugt den gewünschten Datensatz, berechnet die Korrelation und 
+    zeigt den Plot sowie Statistik-Infos in Streamlit an.
+    """
     plt.figure(figsize=(10, 6))
     
     # Datensatz generieren und Titel festlegen
@@ -99,16 +118,16 @@ def update_plot(dataset_type, r, noise, sample_size, show_line):
     elif dataset_type == "Nichtlinear (quadratisch)":
         x, y = generate_nonlinear_data(noise, sample_size)
         title = "Nichtlinearer Zusammenhang (quadratisch)"
-    elif dataset_type == "Zufällig":
+    else:  # "Zufällig"
         x, y = generate_random_data(noise, sample_size)
         title = "Zufällige Verteilung"
     
-    # Berechne Korrelation
+    # Berechne Korrelation (manuell und über scipy)
     r_manual = calculate_pearson(x, y)
     r_scipy, p_value = pearsonr(x, y)
     r_squared = r_scipy**2
     
-    # Plot
+    # Farbwahl nach Datensatztyp
     if dataset_type == "Linear":
         color = 'teal'
     elif dataset_type == "Nichtlinear (quadratisch)":
@@ -116,72 +135,69 @@ def update_plot(dataset_type, r, noise, sample_size, show_line):
     else:  # Zufällig
         color = 'orange'
     
+    # Streudiagramm (ohne explizites xlim/ylim => kein Abschneiden)
     plt.scatter(x, y, c=color, alpha=0.7, label='Datenpunkte')
-    plt.title(f"{title}\nPearson r: {r_manual:.2f} (manuell) | {r_scipy:.2f} (scipy)")
-    plt.xlabel("X")
-    plt.ylabel("Y")
     
-    # Achsenbegrenzungen anpassen
-    if dataset_type == "Linear":
-        plt.xlim(0, 10)
-        plt.ylim(0, 10)
-    elif dataset_type == "Nichtlinear (quadratisch)":
-        plt.xlim(0, 10)
-        plt.ylim(min(y) - noise, max(y) + noise)
-    elif dataset_type == "Zufällig":
-        plt.xlim(np.min(x) - noise, np.max(x) + noise)
-        plt.ylim(np.min(y) - noise, np.max(y) + noise)
-    
-    # Regressionslinie hinzufügen, falls ausgewählt und sinnvoll
+    # Optional Regressionslinie (nur bei linear sinnvoll)
     if show_line and dataset_type == "Linear":
         plot_regression_line(x, y)
         plt.legend()
     
+    plt.title(f"{title}\nPearson r: {r_manual:.2f} (manuell) | {r_scipy:.2f} (scipy)")
+    plt.xlabel("X")
+    plt.ylabel("Y")
+    
     st.pyplot(plt)
     plt.close()
     
-    # Zusätzliche Statistiken anzeigen
-    if dataset_type in ["Linear", "Nichtlinear (quadratisch)", "Zufällig"]:
-        st.markdown(f"""
-        **Pearson r:** {r_manual:.2f} (manuell) | {r_scipy:.2f} (scipy)
+    # Zusätzliche Statistiken in Streamlit anzeigen
+    st.markdown(f"""
+    **Pearson r:** {r_manual:.2f} (manuell) | {r_scipy:.2f} (scipy)
 
-        **Bestimmtheitsmaß ($r^2$):** {r_squared:.2f}
-        
-        **P-Wert:** {p_value:.4f}
-        """)
+    **Bestimmtheitsmaß ($r^2$):** {r_squared:.2f}
     
-    # Erklärung basierend auf Datensatztyp
+    **P-Wert:** {p_value:.4f}
+    """)
+    
+    # Interpretationstexte abhängig vom Datensatztyp
     if dataset_type == "Linear":
         st.markdown("""
-        **Interpretation:**
-        
-        Ein Pearson-Korrelationskoeffizient von $r$ zeigt eine $r$-starke lineare Beziehung zwischen $X$ und $Y$.
-        
-        - **$r > 0$:** Positive Korrelation – wenn $X$ steigt, steigt $Y$.
+        **Interpretation (Linear):**
+
+        - **$r > 0$:** Positive Korrelation – wenn $X$ steigt, steigt auch $Y$.
+          - Beispiel: *Arbeitsstunden und Gehalt* (Je mehr gearbeitet wird, desto höher das Einkommen).
         - **$r < 0$:** Negative Korrelation – wenn $X$ steigt, sinkt $Y$.
+          - Beispiel: *Außentemperatur und Heizkosten* (Je wärmer es wird, desto weniger Heizkosten).
         - **$r = 0$:** Keine lineare Korrelation.
+          - Beispiel: *Schuhgröße und Telefonnummer* (Kein sinnvoller Zusammenhang).
+
+        Höhere Beträge von |r| (z. B. 0.8, 0.9, 1.0) deuten auf eine sehr starke Korrelation hin, 
+        während Werte um 0 oder nahe 0 eher auf keinen linearen Zusammenhang schließen lassen.
         """)
     elif dataset_type == "Nichtlinear (quadratisch)":
         st.markdown("""
-        **Interpretation:**
+        **Interpretation (Nichtlinear, quadratisch):**
         
-        Der Pearson-Korrelationskoeffizient ist für nichtlineare Beziehungen wie eine quadratische Beziehung weniger aussagekräftig. Obwohl es eine starke Beziehung zwischen $X$ und $Y$ gibt, spiegelt $r$ nur die lineare Komponente dieser Beziehung wider.
+        Der Pearson-Korrelationskoeffizient ist für **nichtlineare** Beziehungen (z. B. quadratische Zusammenhänge) 
+        weniger aussagekräftig. Es kann durchaus eine starke Beziehung zwischen $X$ und $Y$ existieren, 
+        doch $r$ misst nur die lineare Komponente.
         """)
-    elif dataset_type == "Zufällig":
+    else:  # Zufällig
         st.markdown("""
-        **Interpretation:**
+        **Interpretation (Zufällig):**
         
-        Ein Pearson-Korrelationskoeffizient nahe 0 zeigt keine lineare Korrelation zwischen $X$ und $Y$. Dies deutet darauf hin, dass die Datenpunkte zufällig verteilt sind und keine erkennbare Beziehung zwischen den Variablen besteht.
+        Ein Pearson-Korrelationskoeffizient nahe 0 zeigt, dass **keine** lineare Korrelation zwischen $X$ und $Y$ besteht. 
+        Die Daten sind zufällig verteilt, ohne erkennbare lineare Struktur.
         """)
 
 def main():
-    st.set_page_config(page_title="Pearson-Korrelation Visualisierung", layout="wide")
     st.title("Interaktive Pearson-Korrelation Visualisierung")
     
     # Einführungstext
     st.markdown("""
-    **Der Pearson-Korrelationskoeffizient** ist ein Maß für die Stärke und Richtung der linearen Beziehung zwischen zwei Variablen. 
-    Diese Anwendung ermöglicht es dir, perfekte lineare Datensätze zu generieren und den Einfluss des Korrelationskoeffizienten auf die Daten zu untersuchen.
+    **Der Pearson-Korrelationskoeffizient** ist ein Maß für die Stärke und Richtung 
+    der linearen Beziehung zwischen zwei Variablen. Diese Anwendung ermöglicht es dir, 
+    verschiedene Datensätze zu generieren und den Einfluss des Korrelationskoeffizienten zu untersuchen.
     """)
 
     # Sidebar für die Parameter
@@ -207,7 +223,7 @@ def main():
             "Datenpunkte:",
             min_value=10,
             max_value=200,
-            value=50,
+            value=150,
             step=10,
             help="Wähle die Anzahl der Datenpunkte, die generiert werden sollen."
         )
@@ -216,7 +232,6 @@ def main():
             value=False,
             help="Zeigt die beste lineare Anpassungslinie für die Daten."
         )
-        # Aktualisiere den Plot basierend auf den Parametern
         update_plot(dataset_type, r, None, sample_size, show_line)
     
     elif dataset_type == "Nichtlinear (quadratisch)":
@@ -236,10 +251,9 @@ def main():
             step=10,
             help="Wähle die Anzahl der Datenpunkte, die generiert werden sollen."
         )
-        # Aktualisiere den Plot basierend auf den Parametern
         update_plot(dataset_type, None, noise, sample_size, False)
     
-    elif dataset_type == "Zufällig":
+    else:  # "Zufällig"
         noise = st.sidebar.slider(
             "Rauschen:",
             min_value=0.1,
@@ -256,7 +270,6 @@ def main():
             step=10,
             help="Wähle die Anzahl der Datenpunkte, die generiert werden sollen."
         )
-        # Aktualisiere den Plot basierend auf den Parametern
         update_plot(dataset_type, None, noise, sample_size, False)
     
     # Anzeige der Pearson-Formel
@@ -266,27 +279,38 @@ def main():
     st.markdown(r"""
     ## Was ist der Pearson-Korrelationskoeffizient?
 
-    Der **Pearson-Korrelationskoeffizient** ($r$) ist ein statistisches Maß, das die Stärke und Richtung einer linearen Beziehung zwischen zwei Variablen beschreibt.
+    Der **Pearson-Korrelationskoeffizient** ($r$) ist ein statistisches Maß, das die Stärke 
+    und Richtung einer linearen Beziehung zwischen zwei Variablen beschreibt.
 
     ### **Interpretation von $r$:**
 
-    - **$r = 1$:** Perfekte positive lineare Korrelation. Wenn $X$ steigt, steigt auch $Y$ in perfekter Harmonie.
-    - **$r = -1$:** Perfekte negative lineare Korrelation. Wenn $X$ steigt, sinkt $Y$ in perfekter Harmonie.
-    - **$r = 0$:** Keine lineare Korrelation. Es besteht keine erkennbare lineare Beziehung zwischen $X$ und $Y$.
-    - **Zwischen -1 und 1:** Je näher $r$ an 1 oder -1 liegt, desto stärker ist die lineare Korrelation.
+    - **$r = 1$:** Perfekte positive lineare Korrelation.  
+      *Beispiel:* Gehalt und gearbeitete Stunden – je mehr Stunden gearbeitet werden, desto höher das Einkommen.
+    - **$r = -1$:** Perfekte negative lineare Korrelation.  
+      *Beispiel:* Außentemperatur und Heizkosten – je wärmer es draußen ist, desto weniger Heizkosten fallen an.
+    - **$r = 0$:** Keine lineare Korrelation.  
+      *Beispiel:* Schuhgröße und Telefonnummer – es besteht kein sinnvoller linearer Zusammenhang.
+    - **Zwischen -1 und 1:** Je näher $r$ an ±1 liegt, desto stärker ist die lineare Korrelation.  
+      *Beispiel:* Bei $r \approx 0.7$ könnte es sich um den Zusammenhang von Lernzeit und Note handeln, 
+      bei dem eine höhere Lernzeit tendenziell zu besseren Noten führt (positive Korrelation).
 
     ### **Bestimmtheitsmaß ($r^2$):**
 
-    Das Bestimmtheitsmaß gibt an, wie viel Prozent der Varianz einer Variable durch die andere Variable erklärt wird. Zum Beispiel bedeutet $r^2 = 0.81$, dass 81% der Varianz von $Y$ durch $X$ erklärt wird.
+    Das Bestimmtheitsmaß gibt an, wie viel Prozent der Varianz einer Variable durch die andere Variable erklärt wird. 
+    Zum Beispiel bedeutet $r^2 = 0.81$, dass 81% der Varianz von $Y$ durch $X$ erklärt werden.
 
     ### **P-Wert:**
 
-    Der **P-Wert** gibt an, ob die beobachtete Korrelation statistisch signifikant ist. Ein kleiner P-Wert (typischerweise < 0.05) deutet darauf hin, dass die beobachtete Korrelation nicht zufällig entstanden ist.
+    Der **P-Wert** gibt an, ob die beobachtete Korrelation statistisch signifikant ist. 
+    Ein kleiner P-Wert (typischerweise < 0.05) deutet darauf hin, dass die beobachtete Korrelation 
+    mit hoher Wahrscheinlichkeit nicht zufällig ist.
 
     ### **Wichtige Hinweise:**
 
-    - Der Pearson-Korrelationskoeffizient misst nur **lineare** Beziehungen. Bei nichtlinearen Beziehungen kann er irreführend sein.
-    - Korrelation impliziert **keine Kausalität**. Ein hoher $r$ bedeutet nicht, dass eine Variable die andere verursacht.
+    - Der Pearson-Korrelationskoeffizient misst nur **lineare** Beziehungen. 
+      Bei nichtlinearen Beziehungen kann er irreführend sein.
+    - Korrelation impliziert **keine Kausalität**. Ein hoher $r$ bedeutet nicht, 
+      dass eine Variable die andere verursacht.
     """)
 
 if __name__ == "__main__":
