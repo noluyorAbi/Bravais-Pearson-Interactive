@@ -11,7 +11,7 @@ An interactive web application to visualize the **Pearson correlation coefficien
 - 🔢 **Interactive Parameter Controls** for correlation strength, noise, and sample size  
 - 🧮 **Manually Implemented Pearson Correlation Calculation**  
 - 🏹 **Real-time Scatter Plots with Regression Lines**  
-- 📊 **Statistical Metrics:** Pearson’s r, \( r^2 \) (coefficient of determination), and p-value  
+- 📊 **Statistical Metrics:** Pearson’s r, $r^2$ (coefficient of determination), and p-value  
 - 🎨 **Seaborn & Matplotlib Styling for Clean Data Visualization**  
 
 ## 🚀 Installation
@@ -54,14 +54,12 @@ streamlit run interactive.py
 
 The **Pearson correlation coefficient (r)** is a measure of the **linear relationship** between two variables:
 
-\[
-r = \frac{n \sum xy - (\sum x)(\sum y)}{\sqrt{(n \sum x^2 - (\sum x)^2)\,(n \sum y^2 - (\sum y)^2)}}
-\]
+$$r = \frac{n \sum xy - (\sum x)(\sum y)}{\sqrt{(n \sum x^2 - (\sum x)^2)\,(n \sum y^2 - (\sum y)^2)}}$$
 
 **Interpretation of r:**
-- **\( r = 1 \):** Perfect positive correlation
-- **\( r = -1 \):** Perfect negative correlation
-- **\( r = 0 \):** No correlation
+- **$r = 1$:** Perfect positive correlation
+- **$r = -1$:** Perfect negative correlation
+- **$r = 0$:** No correlation
 
 ## 🛠 Dependencies
 
